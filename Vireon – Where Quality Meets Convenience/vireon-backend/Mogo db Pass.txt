@@ -1,0 +1,16 @@
+mongo db user pass - 5Dz8lP3encjk61WP
+
+
+
+
+{
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3YmMxZDZjZmEyMGFmMDUxY2FmNDEyZiIsImlhdCI6MTc0MDQ2Mjg0NywiZXhwIjoxNzQxMDY3NjQ3fQ.X6qzKyHjjACULCm6m0046UjdgfYVFS8896-emTypBQ8"
+}
+
+
+
+user : {
+  "email": "john@example.com",
+  "password": "password123"
+}

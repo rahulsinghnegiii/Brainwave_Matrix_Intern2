@@ -1,0 +1,233 @@
+🔹 Core Technologies
+✅ React.js – Component-based UI development
+✅ Vite – Fast build tool for optimized React apps
+
+
+🔹 UI & Styling
+✅ Tailwind CSS – Utility-first styling for responsive design
+✅ React Icons – Pre-built icon library
+✅ Framer Motion – Smooth animations & transitions
+
+🔹 Routing & Navigation
+✅ React Router – Client-side navigation
+✅ Protected Routes (Custom AuthGuard) – Role-based access
+
+🔹 State Management & API Handling
+✅ Redux Toolkit – Global state management
+✅ React Query – Fetching & caching API responses
+✅ Axios – Handling API requests
+
+🔹 Authentication & Security
+✅ JWT (JSON Web Token) – Authentication mechanism
+✅ React Hook Form + Yup – Form validation & management
+✅ bcrypt.js (Backend) – Secure password hashing
+
+🔹 Payments & Checkout
+✅ Razorpay API – Secure payment processing
+✅ LocalStorage/SessionStorage – Persist cart & user session
+
+🔹 Performance & Optimization
+✅ Lazy Loading (React Suspense) – Faster initial load
+✅ Skeleton Loading (Shimmer UI) – Smooth UI transitions
+✅ Debouncing (Lodash) – Optimized search & filters
+
+
+
+
+
+
+
+🔹 Additional Tools
+✅ ESLint & Prettier – Code formatting & linting
+✅ Husky & Commitlint – Enforce clean commit messages
+
+
+
+
+
+
+
+🔹 Frontend Architecture Overview
+
+1️⃣ Authentication & User Management
+Why? Secure user access and role-based permissions
+Components Needed:
+- LoginForm: Email/password login
+- RegisterForm: New user registration
+- UserProfile: View/edit user details
+- AuthGuard: Protect private routes
+Features:
+- JWT token management
+- Role-based access (Admin/Customer)
+- Secure password handling
+- Session management
+
+2️⃣ Product Management
+Why? Display and manage product catalog
+Components Needed:
+- ProductList: Grid/list view of products
+- ProductCard: Individual product display
+- ProductDetail: Full product information
+- AdminProductForm: Create/edit products
+Features:
+- Client-side caching
+- Infinite scroll/pagination
+- Search and filtering
+- Category navigation
+- Image optimization
+
+3️⃣ Shopping Features
+Why? Enable product purchase flow
+Components Needed:
+- Cart: Shopping cart management
+- CartItem: Individual cart items
+- WishlistManager: Save products for later
+- ReviewForm: Product reviews/ratings
+Features:
+- Real-time cart updates
+- Stock validation
+- Price calculations
+- Wishlist toggle
+- Rating system
+
+4️⃣ Order System
+Why? Handle purchase completion and tracking
+Components Needed:
+- Checkout: Complete purchase flow
+- OrderHistory: Past orders list
+- OrderDetail: Single order view
+- AddressForm: Shipping details
+Features:
+- Multi-step checkout
+- Order status tracking
+- Shipping updates
+- Payment integration
+- Order confirmation
+
+5️⃣ Admin Dashboard
+Why? Manage store operations
+Components Needed:
+- Dashboard: Overview statistics
+- ProductManager: Product CRUD
+- OrderManager: Order processing
+- UserManager: User administration
+Features:
+- Sales analytics
+- Inventory management
+- Order processing
+- User management
+
+6️⃣ Performance & UX
+Why? Optimize user experience
+Features:
+- Client-side caching
+- Lazy loading
+- Skeleton loading
+- Error boundaries
+- Responsive design
+
+🔹 Suggested File Structure
+src/
+├── components/
+│   ├── auth/
+│   │   ├── LoginForm.tsx
+│   │   ├── RegisterForm.tsx
+│   │   ├── UserProfile.tsx
+│   │   └── AuthGuard.tsx
+│   ├── products/
+│   │   ├── ProductList.tsx
+│   │   ├── ProductCard.tsx
+│   │   ├── ProductDetail.tsx
+│   │   └── AdminProductForm.tsx
+│   ├── cart/
+│   │   ├── Cart.tsx
+│   │   ├── CartItem.tsx
+│   │   └── Checkout.tsx
+│   ├── orders/
+│   │   ├── OrderList.tsx
+│   │   ├── OrderDetail.tsx
+│   │   └── TrackingInfo.tsx
+│   ├── admin/
+│   │   ├── Dashboard.tsx
+│   │   ├── ProductManager.tsx
+│   │   └── OrderManager.tsx
+│   └── common/
+│       ├── Layout.tsx
+│       ├── Navbar.tsx
+│       ├── Loading.tsx
+│       └── ErrorBoundary.tsx
+├── hooks/
+│   ├── useAuth.ts
+│   ├── useCart.ts
+│   ├── useProducts.ts
+│   └── useOrders.ts
+├── services/
+│   ├── api.ts
+│   ├── auth.ts
+│   └── cache.ts
+└── store/
+    ├── authSlice.ts
+    ├── cartSlice.ts
+    ├── productSlice.ts
+    └── orderSlice.ts
+
+🔹 API Integration Points
+1. Authentication
+   - POST /api/auth/login
+   - POST /api/auth/register
+   - GET /api/auth/profile
+
+2. Products
+   - GET /api/products
+   - GET /api/products/:id
+   - POST /api/products (admin)
+   - PUT /api/products/:id (admin)
+
+3. Cart
+   - GET /api/cart
+   - POST /api/cart/add
+   - PUT /api/cart/update
+   - DELETE /api/cart/remove
+
+4. Orders
+   - POST /api/orders
+   - GET /api/orders
+   - GET /api/orders/:id
+   - PUT /api/orders/:id/status (admin)
+
+5. Reviews
+   - POST /api/reviews
+   - GET /api/reviews/product/:id
+
+🔹 State Management
+1. Auth State
+   - Current user
+   - Authentication status
+   - User role
+
+2. Cart State
+   - Cart items
+   - Total price
+   - Item count
+
+3. Product State
+   - Product list
+   - Categories
+   - Search filters
+
+4. Order State
+   - Current order
+   - Order history
+   - Order status
+
+🔹 Required Dependencies
+- React Router: Navigation
+- Redux Toolkit: State management
+- Axios: API calls
+- React Query: Data fetching
+- Styled Components: Styling
+- React Hook Form: Form handling
+- Yup: Form validation
+- React Icons: UI icons 
+
+
