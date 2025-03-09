@@ -15,6 +15,85 @@ const isAdmin = (req, res, next) => {
   }
 };
 
+// Add the missing dashboard endpoint
+router.get('/', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const period = req.query.period || 'week'; // Default to 'week' if not specified
+    
+    // Get date range based on period
+    const currentDate = new Date();
+    let startDate = new Date();
+    
+    switch(period) {
+      case 'day':
+        startDate.setDate(currentDate.getDate() - 1);
+        break;
+      case 'week':
+        startDate.setDate(currentDate.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(currentDate.getMonth() - 1);
+        break;
+      case 'year':
+        startDate.setFullYear(currentDate.getFullYear() - 1);
+        break;
+      default:
+        startDate.setDate(currentDate.getDate() - 7); // Default to week
+    }
+    
+    // Get statistics
+    const totalProducts = await Product.countDocuments();
+    const totalOrders = await Order.countDocuments({ 
+      createdAt: { $gte: startDate } 
+    });
+    const totalUsers = await User.countDocuments({ 
+      createdAt: { $gte: startDate } 
+    });
+    
+    // Get revenue for the period
+    const orders = await Order.find({ 
+      createdAt: { $gte: startDate } 
+    });
+    const totalRevenue = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    
+    // Get recent orders
+    const recentOrders = await Order.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate('user', 'name email');
+    
+    // Get popular products based on order frequency
+    const popularProducts = await Product.find()
+      .sort({ stock: -1 }) // For now, sort by stock as a placeholder
+      .limit(5);
+    
+    // Construct response data
+    const dashboardData = {
+      period,
+      statistics: {
+        totalProducts,
+        totalOrders,
+        totalUsers,
+        totalRevenue
+      },
+      recentOrders,
+      popularProducts,
+      // Basic placeholder monthly data for charts
+      chartData: Array(12).fill(0).map((_, i) => ({
+        month: new Date(0, i).toLocaleString('default', { month: 'short' }),
+        sales: Math.floor(Math.random() * 10000),
+        revenue: Math.floor(Math.random() * 50000)
+      }))
+    };
+    
+    res.json(dashboardData);
+    
+  } catch (error) {
+    console.error('Dashboard data fetch error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Dashboard overview statistics
 router.get('/stats', authenticateToken, isAdmin, async (req, res) => {
   try {

@@ -48,73 +48,11 @@ const calculateDelay = (retryCount) => {
 // Response interceptor for handling errors
 api.interceptors.response.use(
   (response) => {
-    console.log(`API Response Success [${response.config.url}]:`, {
-      status: response.status,
-      data: response.data
-    });
-
-    // Return the data directly if it's already in the correct format
-    if (response.data && typeof response.data === 'object') {
-      return response.data;
-    }
-    
-    // Wrap non-object responses in a data property
-    return { data: response.data };
+    // Make sure we're not modifying the response structure
+    return response;
   },
-  async (error) => {
-    const config = error.config || {};
-    config.retryCount = config.retryCount || 0;
-    const maxRetries = config.url.includes('/auth/') ? 5 : 2; // More retries for auth endpoints
-    
-    console.error(`API Response Error [${config.url}]:`, {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data,
-      retryCount: config.retryCount,
-      maxRetries
-    });
-
-    // Handle specific error cases
-    if (!error.response) {
-      throw new Error('Network error. Please check your connection.');
-    }
-
-    if (error.response.status === 401) {
-      localStorage.removeItem('token');
-      if (!config.url.includes('/auth/login')) {
-        window.location.href = '/login';
-      }
-      throw new Error('Authentication failed. Please login again.');
-    }
-
-    if (error.response.status === 400) {
-      const message = error.response.data.message || 'Invalid request data';
-      throw new Error(message);
-    }
-
-    if (error.response.status === 409) {
-      throw new Error('Email already exists');
-    }
-
-    // Handle rate limiting with increased retries for auth endpoints
-    if (error.response.status === 429 && config.retryCount < maxRetries) {
-      config.retryCount += 1;
-      const delayTime = calculateDelay(config.retryCount);
-      
-      console.log(`Rate limited. Retry attempt ${config.retryCount} of ${maxRetries}. Waiting ${delayTime}ms before retry...`);
-      
-      // Wait for the calculated delay time
-      await new Promise(resolve => setTimeout(resolve, delayTime));
-      
-      // Retry the request
-      return api(config);
-    }
-
-    if (error.response.status === 429) {
-      throw new Error(`Too many attempts. Please wait ${Math.ceil(MAX_DELAY / 1000)} seconds and try again.`);
-    }
-
-    throw new Error(error.response.data.message || error.message || 'An error occurred');
+  (error) => {
+    return Promise.reject(error);
   }
 );
 

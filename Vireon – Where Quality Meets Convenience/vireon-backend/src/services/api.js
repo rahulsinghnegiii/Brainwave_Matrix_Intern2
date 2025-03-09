@@ -73,10 +73,32 @@ api.interceptors.response.use(
       pendingRequests.delete(requestKey);
     }
     
-    // Handle 401 errors by logging out
-    if (error.response && error.response.status === 401) {
-      console.error('Response interceptor error: 401', error.message);
-      // Don't trigger a logout here to prevent infinite loop
+    // Enhanced error logging
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error(`Response interceptor error: ${error.response.status} ${error.message}`, {
+        data: error.response.data,
+        url: error.config.url,
+        method: error.config.method
+      });
+      
+      // Add user-friendly message to the error
+      error.userMessage = error.response.data?.message || 'An error occurred. Please try again.';
+      
+      // Handle specific status codes
+      if (error.response.status === 401) {
+        // Don't trigger a logout here to prevent infinite loop
+        console.warn('Authentication error detected');
+      }
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('No response received:', error.request);
+      error.userMessage = 'No response from server. Please check your connection.';
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('Request setup error:', error.message);
+      error.userMessage = 'Error sending request. Please try again.';
     }
     
     return Promise.reject(error);

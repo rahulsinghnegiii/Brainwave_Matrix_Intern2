@@ -1,4 +1,5 @@
 import api from './api';
+import paymentService from './paymentService';
 
 export const orderService = {
   // Get all orders for the current user
@@ -23,11 +24,29 @@ export const orderService = {
     }
   },
 
-  // Create a new order
+  // Create a new order with payment processing
   async createOrder(orderData) {
     try {
-      const response = await api.post('/orders', orderData);
-      return response.data;
+      // First process the payment
+      const paymentResult = await paymentService.processPayment({
+        amount: orderData.totals.total,
+        currency: 'USD',
+        paymentMethod: orderData.paymentDetails
+      });
+      
+      // If payment is successful, create the order
+      if (paymentResult.success) {
+        const orderWithPayment = {
+          ...orderData,
+          paymentId: paymentResult.paymentId,
+          paymentStatus: paymentResult.status
+        };
+        
+        const response = await api.post('/orders', orderWithPayment);
+        return response.data;
+      } else {
+        throw new Error(paymentResult.error || 'Payment processing failed');
+      }
     } catch (error) {
       console.error('Failed to create order:', error);
       throw error;

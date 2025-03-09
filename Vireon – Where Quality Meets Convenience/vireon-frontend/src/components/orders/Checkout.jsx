@@ -1,55 +1,47 @@
-import { useState } from 'react';
-import { FiCheck, FiTruck, FiCreditCard, FiCheckCircle } from 'react-icons/fi';
+import { useEffect } from 'react';
+import { FiCheck, FiTruck, FiCreditCard, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
 import AddressForm from './AddressForm';
+import PaymentForm from './PaymentForm';
+import OrderSummary from './OrderSummary';
+import useCheckout from '../../hooks/useCheckout';
+import EmptyCart from '../cart/EmptyCart';
 
 const steps = [
   { id: 'shipping', name: 'Shipping', icon: FiTruck },
-  { id: 'billing', name: 'Billing', icon: FiCreditCard },
+  { id: 'payment', name: 'Payment', icon: FiCreditCard },
   { id: 'review', name: 'Review', icon: FiCheckCircle },
 ];
 
-const Checkout = ({ cart, onPlaceOrder }) => {
-  const [currentStep, setCurrentStep] = useState('shipping');
-  const [shippingAddress, setShippingAddress] = useState(null);
-  const [billingAddress, setBillingAddress] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+const Checkout = () => {
+  const {
+    currentStep,
+    shippingAddress,
+    billingAddress,
+    paymentDetails,
+    isProcessing,
+    error,
+    orderComplete,
+    cart,
+    subtotal,
+    shipping,
+    tax,
+    total,
+    handleShippingSubmit,
+    handlePaymentSubmit,
+    handlePlaceOrder,
+  } = useCheckout();
 
-  // Calculate order summary
-  const subtotal = cart.items.reduce((total, item) => total + (item.product.price * item.quantity), 0);
-  const shipping = subtotal > 100 ? 0 : 10;
-  const tax = subtotal * 0.1;
-  const total = subtotal + shipping + tax;
-
-  const handleShippingSubmit = (data) => {
-    setShippingAddress(data);
-    setCurrentStep('billing');
-  };
-
-  const handleBillingSubmit = (data) => {
-    setBillingAddress(data);
-    setCurrentStep('review');
-  };
-
-  const handlePlaceOrder = async () => {
-    setIsProcessing(true);
-    try {
-      await onPlaceOrder({
-        items: cart.items,
-        shippingAddress,
-        billingAddress,
-        totals: {
-          subtotal,
-          shipping,
-          tax,
-          total,
-        },
-      });
-    } catch (error) {
-      console.error('Failed to place order:', error);
-    } finally {
-      setIsProcessing(false);
+  // Redirect if cart is empty
+  useEffect(() => {
+    if (cart.items.length === 0 && !orderComplete) {
+      // Consider adding a redirect here
     }
-  };
+  }, [cart.items.length, orderComplete]);
+
+  if (cart.items.length === 0 && !orderComplete) {
+    return <EmptyCart message="Your cart is empty. Add some items before checkout." />;
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -104,117 +96,162 @@ const Checkout = ({ cart, onPlaceOrder }) => {
         </ol>
       </nav>
 
-      {/* Step Content */}
-      <div className="mt-8">
-        {currentStep === 'shipping' && (
-          <div>
-            <h2 className="text-lg font-medium text-gray-900 mb-4">
-              Shipping Address
-            </h2>
-            <AddressForm
-              type="shipping"
-              defaultValues={shippingAddress}
-              onSubmit={handleShippingSubmit}
-            />
-          </div>
-        )}
-
-        {currentStep === 'billing' && (
-          <div>
-            <h2 className="text-lg font-medium text-gray-900 mb-4">
-              Billing Address
-            </h2>
-            <AddressForm
-              type="billing"
-              defaultValues={billingAddress || shippingAddress}
-              onSubmit={handleBillingSubmit}
-            />
-          </div>
-        )}
-
-        {currentStep === 'review' && (
-          <div className="space-y-6">
-            <h2 className="text-lg font-medium text-gray-900">
-              Review Your Order
-            </h2>
-
-            {/* Order Summary */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-base font-medium text-gray-900 mb-4">
-                Order Summary
-              </h3>
-              <dl className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <dt className="text-sm text-gray-600">Subtotal</dt>
-                  <dd className="text-sm font-medium text-gray-900">
-                    ${subtotal.toFixed(2)}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <dt className="text-sm text-gray-600">Shipping</dt>
-                  <dd className="text-sm font-medium text-gray-900">
-                    {shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <dt className="text-sm text-gray-600">Tax</dt>
-                  <dd className="text-sm font-medium text-gray-900">
-                    ${tax.toFixed(2)}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between border-t border-gray-200 pt-4">
-                  <dt className="text-base font-medium text-gray-900">Total</dt>
-                  <dd className="text-base font-medium text-gray-900">
-                    ${total.toFixed(2)}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-
-            {/* Addresses */}
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {/* Shipping Address */}
-              <div className="bg-white shadow rounded-lg p-6">
-                <h3 className="text-base font-medium text-gray-900 mb-4">
-                  Shipping Address
-                </h3>
-                <address className="text-sm text-gray-600 not-italic">
-                  {shippingAddress.fullName}<br />
-                  {shippingAddress.address1}<br />
-                  {shippingAddress.address2 && <>{shippingAddress.address2}<br /></>}
-                  {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zipCode}<br />
-                  {shippingAddress.country}
-                </address>
+      {/* Error Message */}
+      <AnimatePresence>
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative"
+            role="alert"
+          >
+            <div className="flex">
+              <div className="py-1">
+                <FiAlertCircle className="h-6 w-6 text-red-500 mr-4" />
               </div>
-
-              {/* Billing Address */}
-              <div className="bg-white shadow rounded-lg p-6">
-                <h3 className="text-base font-medium text-gray-900 mb-4">
-                  Billing Address
-                </h3>
-                <address className="text-sm text-gray-600 not-italic">
-                  {billingAddress.fullName}<br />
-                  {billingAddress.address1}<br />
-                  {billingAddress.address2 && <>{billingAddress.address2}<br /></>}
-                  {billingAddress.city}, {billingAddress.state} {billingAddress.zipCode}<br />
-                  {billingAddress.country}
-                </address>
+              <div>
+                <p className="font-bold">Payment Error</p>
+                <p className="text-sm">{error}</p>
               </div>
             </div>
-
-            {/* Place Order Button */}
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={handlePlaceOrder}
-                disabled={isProcessing}
-                className="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-              >
-                {isProcessing ? 'Processing...' : 'Place Order'}
-              </button>
-            </div>
-          </div>
+          </motion.div>
         )}
+      </AnimatePresence>
+
+      <div className="mt-10">
+        <AnimatePresence mode="wait">
+          {currentStep === 'shipping' && (
+            <motion.div
+              key="shipping"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <h2 className="text-lg font-medium text-gray-900">Shipping Information</h2>
+              <div className="mt-6">
+                <AddressForm type="shipping" onSubmit={handleShippingSubmit} />
+              </div>
+            </motion.div>
+          )}
+
+          {currentStep === 'payment' && (
+            <motion.div
+              key="payment"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <h2 className="text-lg font-medium text-gray-900">Payment Method</h2>
+              <div className="mt-6">
+                <PaymentForm onSubmit={handlePaymentSubmit} />
+              </div>
+            </motion.div>
+          )}
+
+          {currentStep === 'review' && (
+            <motion.div
+              key="review"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <h2 className="text-lg font-medium text-gray-900">Order Review</h2>
+              <div className="mt-6 space-y-8">
+                {/* Order Summary */}
+                <div className="bg-white shadow rounded-lg p-6">
+                  <h3 className="text-base font-medium text-gray-900 mb-4">
+                    Order Summary
+                  </h3>
+                  <OrderSummary
+                    subtotal={subtotal}
+                    shipping={shipping}
+                    tax={tax}
+                    total={total}
+                  />
+                </div>
+
+                {/* Addresses */}
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  {/* Shipping Address */}
+                  <div className="bg-white shadow rounded-lg p-6">
+                    <h3 className="text-base font-medium text-gray-900 mb-4">
+                      Shipping Address
+                    </h3>
+                    <address className="text-sm text-gray-600 not-italic">
+                      {shippingAddress.fullName}<br />
+                      {shippingAddress.address1}<br />
+                      {shippingAddress.address2 && <>{shippingAddress.address2}<br /></>}
+                      {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zipCode}<br />
+                      {shippingAddress.country}
+                    </address>
+                  </div>
+
+                  {/* Billing Address */}
+                  <div className="bg-white shadow rounded-lg p-6">
+                    <h3 className="text-base font-medium text-gray-900 mb-4">
+                      Billing Address
+                    </h3>
+                    <address className="text-sm text-gray-600 not-italic">
+                      {billingAddress.fullName}<br />
+                      {billingAddress.address1}<br />
+                      {billingAddress.address2 && <>{billingAddress.address2}<br /></>}
+                      {billingAddress.city}, {billingAddress.state} {billingAddress.zipCode}<br />
+                      {billingAddress.country}
+                    </address>
+                  </div>
+                </div>
+
+                {/* Payment Information */}
+                <div className="bg-white shadow rounded-lg p-6">
+                  <h3 className="text-base font-medium text-gray-900 mb-4">
+                    Payment Information
+                  </h3>
+                  <div className="text-sm text-gray-600">
+                    <p><strong>Method:</strong> {
+                      paymentDetails.paymentMethod === 'credit-card' ? 'Credit Card' :
+                      paymentDetails.paymentMethod === 'paypal' ? 'PayPal' :
+                      paymentDetails.paymentMethod === 'apple-pay' ? 'Apple Pay' :
+                      paymentDetails.paymentMethod === 'google-pay' ? 'Google Pay' : 
+                      'Unknown'
+                    }</p>
+                    
+                    {paymentDetails.paymentMethod === 'credit-card' && (
+                      <>
+                        <p className="mt-2"><strong>Card Holder:</strong> {paymentDetails.nameOnCard}</p>
+                        <p><strong>Card Number:</strong> •••• •••• •••• {paymentDetails.cardNumber.slice(-4)}</p>
+                        <p><strong>Expiration:</strong> {paymentDetails.expirationDate}</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Place Order Button */}
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handlePlaceOrder}
+                    disabled={isProcessing}
+                    className="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing...
+                      </>
+                    ) : 'Place Order'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

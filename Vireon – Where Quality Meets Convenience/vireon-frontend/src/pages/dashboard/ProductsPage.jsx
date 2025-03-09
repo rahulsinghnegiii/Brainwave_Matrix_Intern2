@@ -48,6 +48,10 @@ const ProductsPage = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      console.log('Raw response:', response);
+      console.log('Response data type:', typeof response.data);
+      console.log('Response data:', response.data);
+      
       // Get deleted product IDs from localStorage
       const deletedIds = JSON.parse(localStorage.getItem('deletedProductIds') || '[]');
       console.log('Deleted IDs in localStorage:', deletedIds);
