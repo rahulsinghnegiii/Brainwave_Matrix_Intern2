@@ -1,32 +1,83 @@
 import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
 
-export const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  
-  console.log('Auth middleware called');
-  console.log('Headers:', req.headers);
-  console.log('Auth header:', authHeader);
-  console.log('Token:', token ? `${token.substring(0, 10)}...` : 'No token');
-  
-  if (!token) {
-    return res.status(401).json({ message: 'Authentication required' });
-  }
-
+export const authenticateToken = async (req, res, next) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('Token verification successful. User:', decoded);
-    req.user = decoded;
-    next();
+    // Get token from header
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Access denied. No token provided.'
+      });
+    }
+
+    try {
+      // Verify token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      
+      // Get user from database
+      const user = await User.findById(decoded.id).select('-password');
+      
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token - User not found'
+        });
+      }
+
+      // Add user info to request
+      req.user = {
+        id: user._id,
+        email: user.email,
+        role: user.role || 'user'
+      };
+
+      next();
+    } catch (err) {
+      console.error('Token verification error:', err);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token'
+      });
+    }
   } catch (error) {
-    console.error('Auth middleware error:', error.message);
-    return res.status(401).json({ message: 'Invalid or expired token' });
+    console.error('Authentication error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during authentication'
+    });
   }
 };
 
-// For testing purposes, create a less-strict auth middleware
-export const debugAuthenticateToken = (req, res, next) => {
-  console.log('Debug auth middleware - bypassing normal auth');
-  req.user = { id: 'debug-user', role: 'admin' };
+// Middleware to check if user is admin
+export const isAdmin = (req, res, next) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Admin privileges required.'
+    });
+  }
   next();
+};
+
+// Combined middleware for admin routes
+export const authenticateAdmin = [authenticateToken, isAdmin];
+
+// Debug version of authenticate token for development
+export const debugAuthenticateToken = (req, res, next) => {
+  if (process.env.NODE_ENV === 'development') {
+    // For development, set a mock admin user
+    req.user = {
+      id: 'debug-admin-id',
+      email: 'admin@example.com',
+      role: 'admin'
+    };
+    return next();
+  }
+  
+  // In production, use normal authentication
+  return authenticateToken(req, res, next);
 }; 

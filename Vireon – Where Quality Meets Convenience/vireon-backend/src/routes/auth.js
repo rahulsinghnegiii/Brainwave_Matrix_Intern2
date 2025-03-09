@@ -2,9 +2,10 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-
-// You'll need a User model - if you don't have one already, let's create a basic one
 import User from '../models/User.js';
+import { authenticateToken } from '../middleware/auth.js';
+import { validate, userValidation } from '../middleware/validation.js';
+import { body } from 'express-validator';
 
 const router = express.Router();
 
@@ -41,8 +42,12 @@ const generateToken = (user) => {
   }
 };
 
-// Login route
-router.post("/login", async (req, res) => {
+// Login route with validation
+router.post("/login", [
+  body('email').isEmail().withMessage('Please provide a valid email'),
+  body('password').notEmpty().withMessage('Password is required'),
+  validate
+], async (req, res) => {
   try {
     console.log('Login attempt with:', req.body);
     const { email, password } = req.body;
@@ -97,15 +102,109 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Registration route
-router.post("/register", async (req, res) => {
+// Get current user profile
+router.get("/user", authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error('Get user profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Update user profile with validation
+router.put("/user", authenticateToken, [
+  body('name').optional().trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
+  body('phone').optional().matches(/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/).withMessage('Invalid phone number format'),
+  body('addresses').optional().isArray().withMessage('Addresses must be an array'),
+  body('addresses.*.street').optional().trim().notEmpty().withMessage('Street is required for address'),
+  body('addresses.*.city').optional().trim().notEmpty().withMessage('City is required for address'),
+  body('addresses.*.state').optional().trim().notEmpty().withMessage('State is required for address'),
+  body('addresses.*.zipCode').optional().trim().notEmpty().withMessage('Zip code is required for address'),
+  validate
+], async (req, res) => {
+  try {
+    const { name, phone, addresses } = req.body;
+    
+    // Find user
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+    
+    // Update fields if provided
+    if (name) user.name = name;
+    if (phone) user.phone = phone;
+    if (addresses) {
+      // Validate addresses format
+      if (!Array.isArray(addresses)) {
+        return res.status(400).json({
+          success: false,
+          message: "Addresses must be an array"
+        });
+      }
+      
+      // Validate each address
+      for (const address of addresses) {
+        if (!address.street || !address.city || !address.state || !address.zipCode) {
+          return res.status(400).json({
+            success: false,
+            message: "Each address must have street, city, state, and zipCode"
+          });
+        }
+      }
+      
+      user.addresses = addresses;
+    }
+    
+    // Save updated user
+    const updatedUser = await user.save();
+    
+    // Remove password from response
+    const userResponse = updatedUser.toObject();
+    delete userResponse.password;
+    
+    res.json({
+      success: true,
+      data: userResponse,
+      message: "Profile updated successfully"
+    });
+  } catch (error) {
+    console.error('Update user profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Registration route with validation
+router.post("/register", userValidation, validate, async (req, res) => {
   try {
     console.log('Registration attempt with:', req.body);
-    const { name, email, password } = req.body;
+    const { name, email, password, phone, role } = req.body;
 
-    // Validate request
+    // Validate required fields
     if (!name || !email || !password) {
-      return res.status(400).json({ message: "Please provide all fields" });
+      return res.status(400).json({ message: "Please provide all required fields" });
     }
 
     // Check if user already exists
@@ -118,11 +217,15 @@ router.post("/register", async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new user
+    // Create new user with optional fields
     const newUser = new User({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      // Only add phone if it's provided
+      ...(phone && { phone }),
+      // Use the role from request or default to 'user' if not specified or not valid
+      role: (role === 'admin' || role === 'user') ? role : 'user'
     });
 
     // Save user
@@ -150,7 +253,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Verify token route - keep the one you already have
+// Verify token route
 router.post("/verify", async (req, res) => {
   try {
     console.log('Verify endpoint called');
@@ -238,7 +341,10 @@ router.get("/debug-token", (req, res) => {
 });
 
 // Token refresh endpoint
-router.post("/refresh", async (req, res) => {
+router.post("/refresh", [
+  body('refreshToken').notEmpty().withMessage('Refresh token is required'),
+  validate
+], async (req, res) => {
   try {
     const { refreshToken } = req.body;
     if (!refreshToken) {
@@ -273,7 +379,7 @@ router.post("/refresh", async (req, res) => {
 });
 
 // Logout endpoint
-router.post("/logout", (req, res) => {
+router.post("/logout", authenticateToken, async (req, res) => {
   // In a more complete implementation, you would add the token to a blacklist
   // or remove it from a whitelist. For now, we'll rely on the client to remove the token.
   res.json({ message: "Logged out successfully" });

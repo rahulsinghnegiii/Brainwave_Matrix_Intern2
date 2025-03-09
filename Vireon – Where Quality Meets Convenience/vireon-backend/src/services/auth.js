@@ -1,16 +1,70 @@
-// If your auth.js exports individual functions like this:
-export const login = async (credentials) => { /* ... */ };
-export const register = async (userData) => { /* ... */ };
-export const logout = () => { /* ... */ };
-export const verifyToken = async () => { /* ... */ };
+import api from './api';
 
-// Instead of having all these as named exports, you might want to group them:
-const authService = {
-  login: async (credentials) => { /* ... */ },
-  register: async (userData) => { /* ... */ },
-  logout: () => { /* ... */ },
-  verifyToken: async () => { /* ... */ }
+// Properly implemented auth functions
+export const register = async (userData) => {
+  try {
+    console.log('Registering user with data:', { ...userData, password: '[HIDDEN]' });
+    const response = await api.post('/auth/register', userData);
+    
+    // If registration is successful, store token
+    if (response.data && response.data.token) {
+      localStorage.setItem('token', response.data.token);
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Registration error:', error);
+    // Extract the error message from the response if available
+    const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
+    throw new Error(errorMessage);
+  }
 };
 
-// And then export this object:
-export default authService; 
+export const login = async (credentials) => {
+  try {
+    const response = await api.post('/auth/login', credentials);
+    
+    // Store token on successful login
+    if (response.data && response.data.token) {
+      localStorage.setItem('token', response.data.token);
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Login error:', error);
+    const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
+    throw new Error(errorMessage);
+  }
+};
+
+export const logout = () => {
+  localStorage.removeItem('token');
+  // Return a resolved promise for consistency
+  return Promise.resolve({ success: true });
+};
+
+export const verifyToken = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      throw new Error('No token found');
+    }
+    
+    const response = await api.get('/auth/verify');
+    return response.data;
+  } catch (error) {
+    console.error('Token verification error:', error);
+    // Clear token on verification failure
+    localStorage.removeItem('token');
+    throw error;
+  }
+};
+
+// Export individual functions
+export default {
+  register,
+  login,
+  logout,
+  verifyToken
+}; 

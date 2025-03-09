@@ -12,6 +12,16 @@ import ProfilePage from './pages/dashboard/ProfilePage';
 import SettingsPage from './pages/dashboard/SettingsPage';
 import AuthGuard from './components/auth/AuthGuard';
 import { useEffect } from 'react';
+import OrderConfirmationPage from './pages/orders/OrderConfirmationPage';
+import AdminLayout from './components/layouts/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import ProductsManagement from './pages/admin/ProductsManagement';
+import OrdersManagement from './pages/admin/OrdersManagement';
+import CustomersManagement from './pages/admin/CustomersManagement';
+import AdminAnalytics from './pages/admin/AdminAnalytics';
+import AdminSettings from './pages/admin/AdminSettings';
+import AdminGuard from './components/auth/AdminGuard';
+import UnauthorizedPage from './pages/errors/UnauthorizedPage';
 
 const App = () => {
   useEffect(() => {
@@ -62,6 +72,29 @@ const App = () => {
         
         {/* 404 Route */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
+        {/* New route for order confirmation */}
+        <Route path="/orders/confirmation/:orderId" element={<OrderConfirmationPage />} />
+
+        {/* Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <AdminGuard>
+              <AdminLayout />
+            </AdminGuard>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="products" element={<ProductsManagement />} />
+          <Route path="orders" element={<OrdersManagement />} />
+          <Route path="customers" element={<CustomersManagement />} />
+          <Route path="analytics" element={<AdminAnalytics />} />
+          <Route path="settings" element={<AdminSettings />} />
+        </Route>
+
+        {/* Unauthorized Route */}
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
       </Routes>
     </Router>
   );

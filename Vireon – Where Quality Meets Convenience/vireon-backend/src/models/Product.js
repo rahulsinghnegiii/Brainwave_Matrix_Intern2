@@ -27,11 +27,46 @@ const ProductSchema = new mongoose.Schema({
     type: String,
     default: ""
   },
+  rating: {
+    type: Number,
+    default: 0,
+    min: [0, "Rating cannot be negative"],
+    max: [5, "Rating cannot be more than 5"]
+  },
+  ratingCount: {
+    type: Number,
+    default: 0
+  },
+  inStock: {
+    type: Boolean,
+    default: function() {
+      return this.stock > 0;
+    }
+  },
+  featured: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now
   }
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// Virtual for average rating
+ProductSchema.virtual('averageRating').get(function() {
+  return this.ratingCount > 0 ? this.rating / this.ratingCount : 0;
+});
+
+// Pre-save middleware to update inStock based on stock quantity
+ProductSchema.pre('save', function(next) {
+  this.inStock = this.stock > 0;
+  next();
+});
 
 // In case the model is already defined
 const Product = mongoose.models.Product || mongoose.model("Product", ProductSchema);
